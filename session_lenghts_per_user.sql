@@ -36,16 +36,26 @@ with session_events as (
     session_gates
 )
 
-select 
-  session
-  , user_id
-  , session_start
-  , session_end
-  , timestamp_diff(session_end, session_start, minute) as session_duration
-from 
-  coalesced
-order by 
-  session
-  , user_id
+, sessions as (
+  select 
+    session
+    , user_id
+    , session_start
+    , session_end
+    , timestamp_diff(session_end, session_start, minute) as session_duration
+  from 
+    coalesced
+  order by 
+    session
+    , user_id
+)
 
+select
+  *
+  -- , lag(session_end, 1) over (partition by user_id order by session_start) as end_of_previous_session -- just to see
+  , timestamp_diff(session_start, lag(session_end, 1) over (partition by user_id order by session_start), minute) as time_between_sessions
+from 
+  sessions
+order by
+  session
 
